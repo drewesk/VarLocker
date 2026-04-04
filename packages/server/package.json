@@ -1,0 +1,22 @@
+{
+  "name": "@varlocker/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build:ui": "vp build ui/index.html --outDir dist/ui",
+    "build:server": "bun build src/index.ts --compile --outfile dist/varlocker",
+    "build": "bun run build:ui && bun run build:server",
+    "start": "dist/varlocker"
+  },
+  "dependencies": {
+    "@noble/post-quantum": "^0.6.0",
+    "hono": "^4.7.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "vite-plus": "^0.1.15",
+    "typescript": "^5.8.0"
+  }
+}
