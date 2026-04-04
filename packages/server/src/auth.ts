@@ -13,9 +13,10 @@ export async function requireToken(c: Context, next: Next): Promise<Response | v
   if (!token) return c.json({ error: "missing token" }, 401);
 
   const hash = await hashToken(token);
-  const row = db
-    .query("SELECT id, project_id FROM api_tokens WHERE token_hash = ?")
-    .get(hash) as { id: number; project_id: number | null } | null;
+  const row = db.query("SELECT id, project_id FROM api_tokens WHERE token_hash = ?").get(hash) as {
+    id: number;
+    project_id: number | null;
+  } | null;
 
   if (!row) return c.json({ error: "invalid token" }, 401);
 

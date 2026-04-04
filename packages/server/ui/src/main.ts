@@ -73,7 +73,10 @@ $<HTMLFormElement>("new-secret-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const key = $<HTMLInputElement>("new-secret-key").value.trim();
   const value = $<HTMLInputElement>("new-secret-value").value;
-  await apiFetch(`/api/projects/${currentSlug}/secrets/${key}`, { method: "PUT", body: JSON.stringify({ value }) });
+  await apiFetch(`/api/projects/${currentSlug}/secrets/${key}`, {
+    method: "PUT",
+    body: JSON.stringify({ value }),
+  });
   $<HTMLInputElement>("new-secret-key").value = "";
   $<HTMLInputElement>("new-secret-value").value = "";
   await loadSecrets();

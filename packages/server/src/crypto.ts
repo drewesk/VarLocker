@@ -13,7 +13,7 @@ async function masterKey(): Promise<CryptoKey> {
     raw,
     { name: "AES-GCM", length: 256 },
     false,
-    ["encrypt", "decrypt"]
+    ["encrypt", "decrypt"],
   );
 }
 
@@ -23,7 +23,11 @@ export async function encryptSecret(plaintext: string): Promise<{ enc: string; i
   const key = await masterKey();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const enc = new TextEncoder();
-  const cipherBuf = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(plaintext));
+  const cipherBuf = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    enc.encode(plaintext),
+  );
   return {
     enc: Buffer.from(cipherBuf).toString("base64"),
     iv: Buffer.from(iv).toString("base64"),
@@ -46,7 +50,10 @@ export function generateKyberKeypair(): KyberKeypair {
   return ml_kem768.keygen();
 }
 
-export function kyberEncapsulate(publicKey: Uint8Array): { ciphertext: Uint8Array; sharedSecret: Uint8Array } {
+export function kyberEncapsulate(publicKey: Uint8Array): {
+  ciphertext: Uint8Array;
+  sharedSecret: Uint8Array;
+} {
   return ml_kem768.encapsulate(publicKey);
 }
 

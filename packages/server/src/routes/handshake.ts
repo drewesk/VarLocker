@@ -7,10 +7,15 @@ const app = new Hono();
 // It is never written to the database.
 let _serverPublicKey: Uint8Array | null = null;
 let _serverSecretKey: Uint8Array | null = null;
+let _sessionKey: CryptoKey | null = null;
 
 export function loadKyberKeypair(pub: Uint8Array, sec: Uint8Array): void {
   _serverPublicKey = pub;
   _serverSecretKey = sec;
+}
+
+export function getSessionKey(): CryptoKey | null {
+  return _sessionKey;
 }
 
 // GET /api/handshake
@@ -35,16 +40,21 @@ app.post("/", async (c) => {
 
   // Derive a session key from the shared secret using HKDF-SHA256.
   const baseKey = await crypto.subtle.importKey("raw", sharedSecret, "HKDF", false, ["deriveKey"]);
-  const sessionKey = await crypto.subtle.deriveKey(
-    { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(32), info: new TextEncoder().encode("varlocker-session") },
+  _sessionKey = await crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(32),
+      info: new TextEncoder().encode("varlocker-session"),
+    },
     baseKey,
     { name: "AES-GCM", length: 256 },
     true,
-    ["encrypt", "decrypt"]
+    ["encrypt", "decrypt"],
   );
 
   // Export so the client can use it for subsequent encrypted requests.
-  const rawKey = await crypto.subtle.exportKey("raw", sessionKey);
+  const rawKey = await crypto.subtle.exportKey("raw", _sessionKey);
   return c.json({ sessionKey: Buffer.from(rawKey).toString("base64") });
 });
 

@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "vite-plus": "^0.1.15",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vite-plus": "^0.1.15"
   }
 }

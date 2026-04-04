@@ -16,6 +16,8 @@ vp-out/
 .env
 .env.local
 .env.*.local
+# .env.example is safe to commit (contains no secrets)
+!.env.example
 
 # database files
 *.db

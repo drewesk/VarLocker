@@ -1,4 +1,10 @@
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 body {
   font-family: system-ui, sans-serif;
@@ -15,12 +21,27 @@ header {
   border-bottom: 1px solid #222;
 }
 
-h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.05em; }
-h2 { font-size: 1rem; font-weight: 500; margin-bottom: 1rem; color: #aaa; }
+h1 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+h2 {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  color: #aaa;
+}
 
-main { max-width: 860px; margin: 2rem auto; padding: 0 1.5rem; }
+main {
+  max-width: 860px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
 
-section { margin-bottom: 2rem; }
+section {
+  margin-bottom: 2rem;
+}
 
 input {
   background: #1a1a1a;
@@ -32,7 +53,10 @@ input {
   margin-right: 0.5rem;
 }
 
-input:focus { outline: none; border-color: #555; }
+input:focus {
+  outline: none;
+  border-color: #555;
+}
 
 button {
   background: #2a2a2a;
@@ -44,9 +68,14 @@ button {
   font-size: 0.9rem;
 }
 
-button:hover { background: #333; }
+button:hover {
+  background: #333;
+}
 
-ul { list-style: none; margin-bottom: 1rem; }
+ul {
+  list-style: none;
+  margin-bottom: 1rem;
+}
 
 li {
   display: flex;
@@ -56,12 +85,30 @@ li {
   border-bottom: 1px solid #1e1e1e;
 }
 
-li span { font-family: monospace; font-size: 0.9rem; }
+li span {
+  font-family: monospace;
+  font-size: 0.9rem;
+}
 
-li button { font-size: 0.75rem; padding: 0.25rem 0.5rem; }
+li button {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
 
-form { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+form {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
 
-.error { color: #e05c5c; font-size: 0.85rem; margin-top: 0.5rem; }
+.error {
+  color: #e05c5c;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
 
-#auth-status { font-size: 0.8rem; color: #666; }
+#auth-status {
+  font-size: 0.8rem;
+  color: #666;
+}
