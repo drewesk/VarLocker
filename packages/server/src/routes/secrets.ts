@@ -6,6 +6,25 @@ import { getSessionKey } from "./handshake.ts";
 
 const app = new Hono();
 
+function resolveSessionKey(c: any): CryptoKey | null {
+  const sessionId = c.req.header("x-session-id") ?? null;
+  if (!sessionId) return null;
+  return getSessionKey(sessionId);
+}
+
+function requireSessionKey(c: any): CryptoKey {
+  const key = resolveSessionKey(c);
+  if (!key) throw new Error("Session key not established. Include x-session-id header.");
+  return key;
+}
+
+function authorizeProject(c: any, projectId: number): Response | void {
+  const tokenProjectId = (c.get("tokenProjectId") as number | null) ?? null;
+  if (tokenProjectId !== null && tokenProjectId !== projectId) {
+    return c.json({ error: "forbidden" }, 403);
+  }
+}
+
 app.use("/*", requireToken);
 
 // Decrypt request body if encrypted with session key
@@ -21,10 +40,8 @@ async function decryptRequestBody(c: any): Promise<any> {
     throw new Error("Missing encryption headers or ciphertext");
   }
 
-  const sessionKey = getSessionKey();
-  if (!sessionKey) {
-    throw new Error("Session key not established. Perform handshake first.");
-  }
+  const sessionKey = requireSessionKey(c);
+  c.set("sessionKey", sessionKey);
 
   const iv = Uint8Array.from(atob(ivB64), (c) => c.charCodeAt(0));
   const ciphertext = Uint8Array.from(atob(body.ciphertext), (c) => c.charCodeAt(0));
@@ -41,6 +58,8 @@ function getProject(slug: string): { id: number } | null {
 app.get("/:slug/secrets", (c) => {
   const project = getProject(c.req.param("slug"));
   if (!project) return c.json({ error: "not found" }, 404);
+  const authErr = authorizeProject(c, project.id);
+  if (authErr) return authErr;
   const rows = db
     .query("SELECT key, created_at, updated_at FROM secrets WHERE project_id = ? ORDER BY key")
     .all(project.id);
@@ -51,6 +70,8 @@ app.get("/:slug/secrets", (c) => {
 app.put("/:slug/secrets/:key", async (c) => {
   const project = getProject(c.req.param("slug"));
   if (!project) return c.json({ error: "not found" }, 404);
+  const authErr = authorizeProject(c, project.id);
+  if (authErr) return authErr;
   const body = await decryptRequestBody(c);
   const { value } = body as { value: string };
   if (value === undefined) return c.json({ error: "value required" }, 400);
@@ -66,7 +87,7 @@ app.put("/:slug/secrets/:key", async (c) => {
   // Encrypt response if request was encrypted
   const contentType = c.req.header("content-type") || "";
   if (contentType.includes("application/encrypted+json")) {
-    const sessionKey = getSessionKey();
+    const sessionKey = (c.get("sessionKey") as CryptoKey | undefined) ?? null;
     if (sessionKey) {
       const responseStr = JSON.stringify({ ok: true });
       const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -91,6 +112,8 @@ app.put("/:slug/secrets/:key", async (c) => {
 app.delete("/:slug/secrets/:key", (c) => {
   const project = getProject(c.req.param("slug"));
   if (!project) return c.json({ error: "not found" }, 404);
+  const authErr = authorizeProject(c, project.id);
+  if (authErr) return authErr;
   db.run("DELETE FROM secrets WHERE project_id = ? AND key = ?", [project.id, c.req.param("key")]);
   return c.json({ ok: true });
 });
@@ -99,12 +122,33 @@ app.delete("/:slug/secrets/:key", (c) => {
 app.get("/:slug/env", async (c) => {
   const project = getProject(c.req.param("slug"));
   if (!project) return c.json({ error: "not found" }, 404);
+  const authErr = authorizeProject(c, project.id);
+  if (authErr) return authErr;
   const rows = db
     .query("SELECT key, enc_value, iv FROM secrets WHERE project_id = ?")
     .all(project.id) as { key: string; enc_value: string; iv: string }[];
   const lines = await Promise.all(
     rows.map(async (r) => `${r.key}=${await decryptSecret(r.enc_value, r.iv)}`),
   );
+  const accept = c.req.header("accept") || "";
+  if (accept.includes("application/encrypted+json")) {
+    const sessionKey = resolveSessionKey(c);
+    if (!sessionKey) return c.json({ error: "session required" }, 400);
+    const payload = JSON.stringify({ env: lines.join("\n") + "\n" });
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv },
+      sessionKey,
+      new TextEncoder().encode(payload),
+    );
+    return c.json(
+      {
+        iv: btoa(String.fromCharCode(...iv)),
+        ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+      },
+      { headers: { "content-type": "application/encrypted+json" } },
+    );
+  }
   return new Response(lines.join("\n") + "\n", { headers: { "content-type": "text/plain" } });
 });
 
@@ -112,11 +156,31 @@ app.get("/:slug/env", async (c) => {
 app.get("/:slug/json", async (c) => {
   const project = getProject(c.req.param("slug"));
   if (!project) return c.json({ error: "not found" }, 404);
+  const authErr = authorizeProject(c, project.id);
+  if (authErr) return authErr;
   const rows = db
     .query("SELECT key, enc_value, iv FROM secrets WHERE project_id = ?")
     .all(project.id) as { key: string; enc_value: string; iv: string }[];
   const out: Record<string, string> = {};
   for (const r of rows) out[r.key] = await decryptSecret(r.enc_value, r.iv);
+  const accept = c.req.header("accept") || "";
+  if (accept.includes("application/encrypted+json")) {
+    const sessionKey = resolveSessionKey(c);
+    if (!sessionKey) return c.json({ error: "session required" }, 400);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv },
+      sessionKey,
+      new TextEncoder().encode(JSON.stringify(out)),
+    );
+    return c.json(
+      {
+        iv: btoa(String.fromCharCode(...iv)),
+        ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+      },
+      { headers: { "content-type": "application/encrypted+json" } },
+    );
+  }
   return c.json(out);
 });
 

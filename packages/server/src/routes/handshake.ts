@@ -7,15 +7,16 @@ const app = new Hono();
 // It is never written to the database.
 let _serverPublicKey: Uint8Array | null = null;
 let _serverSecretKey: Uint8Array | null = null;
-let _sessionKey: CryptoKey | null = null;
+const _sessions = new Map<string, CryptoKey>();
 
 export function loadKyberKeypair(pub: Uint8Array, sec: Uint8Array): void {
   _serverPublicKey = pub;
   _serverSecretKey = sec;
 }
 
-export function getSessionKey(): CryptoKey | null {
-  return _sessionKey;
+export function getSessionKey(sessionId: string | null): CryptoKey | null {
+  if (!sessionId) return null;
+  return _sessions.get(sessionId) ?? null;
 }
 
 // GET /api/handshake
@@ -28,7 +29,7 @@ app.get("/", (c) => {
 // POST /api/handshake
 // Client sends { ciphertext } produced by ml_kem768.encapsulate(serverPublicKey).
 // Server decapsulates to get the shared secret, derives a session key via HKDF,
-// and returns it encrypted with itself so the client can confirm the round-trip.
+// and returns an opaque session id the client includes on subsequent requests.
 app.post("/", async (c) => {
   if (!_serverSecretKey) return c.json({ error: "keypair not loaded" }, 500);
 
@@ -40,7 +41,7 @@ app.post("/", async (c) => {
 
   // Derive a session key from the shared secret using HKDF-SHA256.
   const baseKey = await crypto.subtle.importKey("raw", sharedSecret, "HKDF", false, ["deriveKey"]);
-  _sessionKey = await crypto.subtle.deriveKey(
+  const sessionKey = await crypto.subtle.deriveKey(
     {
       name: "HKDF",
       hash: "SHA-256",
@@ -52,10 +53,9 @@ app.post("/", async (c) => {
     true,
     ["encrypt", "decrypt"],
   );
-
-  // Export so the client can use it for subsequent encrypted requests.
-  const rawKey = await crypto.subtle.exportKey("raw", _sessionKey);
-  return c.json({ sessionKey: Buffer.from(rawKey).toString("base64") });
+  const sessionId = crypto.randomUUID();
+  _sessions.set(sessionId, sessionKey);
+  return c.json({ sessionId });
 });
 
 export default app;

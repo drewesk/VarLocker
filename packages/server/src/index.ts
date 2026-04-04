@@ -60,10 +60,12 @@ app.route("/api/handshake", handshakeRoute);
 app.route("/api/projects", projectsRoute);
 app.route("/api/projects", secretsRoute);
 
+const UI_ROOT = existsSync("./dist/ui") ? "./dist/ui" : "./ui/dist/ui";
+
 // Serve the built UI for everything else
-app.use("/*", serveStatic({ root: "./ui/dist/ui" }));
+app.use("/*", serveStatic({ root: UI_ROOT }));
 app.get("/*", (c) => {
-  const htmlPath = resolve("./ui/dist/ui/index.html");
+  const htmlPath = resolve(join(UI_ROOT, "index.html"));
   const html = readFileSync(htmlPath, "utf-8");
   return c.html(html);
 });

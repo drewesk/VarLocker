@@ -2,6 +2,7 @@ import { ml_kem768 } from "@noble/post-quantum/ml-kem.js";
 
 let _token = "";
 let _sessionKey: CryptoKey | null = null;
+let _sessionId = "";
 
 export function setToken(t: string): void {
   _token = t;
@@ -38,19 +39,28 @@ export async function handshake(): Promise<void> {
   const { publicKey } = (await res.json()) as { publicKey: string };
 
   const serverPub = Uint8Array.from(atob(publicKey), (c) => c.charCodeAt(0));
-  const { ciphertext } = ml_kem768.encapsulate(serverPub);
+  const { ciphertext, sharedSecret } = ml_kem768.encapsulate(serverPub);
 
   const body = (await fetch("/api/handshake", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ ciphertext: btoa(String.fromCharCode(...ciphertext)) }),
-  }).then((r) => r.json())) as { sessionKey: string };
+  }).then((r) => r.json())) as { sessionId: string };
 
-  const rawKey = Uint8Array.from(atob(body.sessionKey), (c) => c.charCodeAt(0));
-  _sessionKey = await crypto.subtle.importKey("raw", rawKey, { name: "AES-GCM" }, false, [
-    "encrypt",
-    "decrypt",
-  ]);
+  const baseKey = await crypto.subtle.importKey("raw", sharedSecret, "HKDF", false, ["deriveKey"]);
+  _sessionKey = await crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(32),
+      info: new TextEncoder().encode("varlocker-session"),
+    },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"],
+  );
+  _sessionId = body.sessionId;
 }
 
 // Authenticated JSON fetch - encrypts request bodies and decrypts responses using the session key.
@@ -59,6 +69,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     authorization: `Bearer ${_token}`,
     ...(init.headers as Record<string, string> | undefined),
   };
+  if (_sessionId) headers["x-session-id"] = _sessionId;
 
   // Encrypt request body if present
   let body: BodyInit | undefined;

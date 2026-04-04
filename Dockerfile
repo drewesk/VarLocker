@@ -10,10 +10,8 @@ RUN bun install --frozen-lockfile
 
 COPY packages/server ./packages/server
 
-# Build the UI with vite-plus, then compile the server binary
-RUN cd packages/server && \
-    bunx vite build && \
-    bun build src/index.ts --compile --outfile dist/varlocker
+# Build UI and server binary via package scripts
+RUN bun run --cwd packages/server build
 
 # ---- final image ----
 FROM alpine:3.19
