@@ -6,6 +6,10 @@ import { hashNewToken } from "./auth.ts";
 import handshakeRoute, { loadKyberKeypair } from "./routes/handshake.ts";
 import projectsRoute from "./routes/projects.ts";
 import secretsRoute from "./routes/secrets.ts";
+import { readFileSync } from "fs";
+import { resolve } from "path";
+import { writeFileSync, readFileSync, existsSync } from "fs";
+import { join } from "path";
 
 if (!process.env.MASTER_PASSWORD) {
   console.error("MASTER_PASSWORD is required");
@@ -27,7 +31,24 @@ if (process.env.ADMIN_TOKEN) {
 // Generate or load the Kyber keypair.
 // For production, persist pub/sec to DATA_DIR and reload on restart.
 // For MVP, a fresh keypair is generated each start (clients re-handshake).
-const keypair = generateKyberKeypair();
+const DATA_DIR = process.env.DATA_DIR ?? "./data";
+const KEYPAIR_PATH = join(DATA_DIR, 'kyber.keypair');
+let keypair;
+if (existsSync(KEYPAIR_PATH)) {
+  const data = JSON.parse(readFileSync(KEYPAIR_PATH, 'utf8'));
+  keypair = {
+    publicKey: new Uint8Array(data.publicKey),
+    secretKey: new Uint8Array(data.secretKey),
+  };
+  console.log("Loaded existing Kyber keypair.");
+} else {
+  keypair = generateKyberKeypair();
+  writeFileSync(KEYPAIR_PATH, JSON.stringify({
+    publicKey: Array.from(keypair.publicKey),
+    secretKey: Array.from(keypair.secretKey),
+  }), 'utf8');
+  console.log("Generated and saved new Kyber keypair.");
+}
 loadKyberKeypair(keypair.publicKey, keypair.secretKey);
 
 const app = new Hono();
@@ -38,8 +59,12 @@ app.route("/api/projects", projectsRoute);
 app.route("/api/projects", secretsRoute);
 
 // Serve the built UI for everything else
-app.use("/*", serveStatic({ root: "./dist/ui" }));
-app.get("/*", serveStatic({ path: "./dist/ui/index.html" }));
+app.use("/*", serveStatic({ root: "./ui/dist/ui" }));
+app.get("/*", (c) => {
+  const htmlPath = resolve("./ui/dist/ui/index.html");
+  const html = readFileSync(htmlPath, "utf-8");
+  return c.html(html);
+});
 
 const PORT = Number(process.env.PORT ?? 3000);
 console.log(`VarLocker running on http://localhost:${PORT}`);
