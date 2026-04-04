@@ -1,0 +1,23 @@
+{
+  "name": "varlocker",
+  "version": "0.1.0",
+  "description": "Pull secrets from a self-hosted VarLocker server",
+  "type": "module",
+  "bin": {
+    "varlocker": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --compile --outfile dist/cli.js",
+    "dev": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@noble/post-quantum": "^0.6.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.8.0"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}

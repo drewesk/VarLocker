@@ -1,0 +1,12 @@
+services:
+  varlocker:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - MASTER_PASSWORD=${MASTER_PASSWORD}
+      - PORT=3000
+      - DATA_DIR=/data
+    volumes:
+      - ./data:/data
+    restart: unless-stopped

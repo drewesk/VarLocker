@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VarLocker</title>
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+  <header>
+    <h1>VarLocker</h1>
+    <div id="auth-status"></div>
+  </header>
+
+  <main>
+    <section id="token-form">
+      <h2>Connect</h2>
+      <input id="input-token" type="password" placeholder="API token" />
+      <button id="btn-connect">Connect</button>
+      <p id="connect-error" class="error"></p>
+    </section>
+
+    <section id="app" hidden>
+      <div id="projects-panel">
+        <h2>Projects</h2>
+        <ul id="project-list"></ul>
+        <form id="new-project-form">
+          <input id="new-project-name" type="text" placeholder="name" />
+          <input id="new-project-slug" type="text" placeholder="slug" />
+          <button type="submit">Add project</button>
+        </form>
+      </div>
+
+      <div id="secrets-panel" hidden>
+        <h2 id="secrets-heading"></h2>
+        <ul id="secret-list"></ul>
+        <form id="new-secret-form">
+          <input id="new-secret-key" type="text" placeholder="KEY" />
+          <input id="new-secret-value" type="password" placeholder="value" />
+          <button type="submit">Add secret</button>
+        </form>
+        <button id="btn-back">Back to projects</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

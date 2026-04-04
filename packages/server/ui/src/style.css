@@ -1,0 +1,67 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, sans-serif;
+  background: #0f0f0f;
+  color: #e8e8e8;
+  min-height: 100vh;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #222;
+}
+
+h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.05em; }
+h2 { font-size: 1rem; font-weight: 500; margin-bottom: 1rem; color: #aaa; }
+
+main { max-width: 860px; margin: 2rem auto; padding: 0 1.5rem; }
+
+section { margin-bottom: 2rem; }
+
+input {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #e8e8e8;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  margin-right: 0.5rem;
+}
+
+input:focus { outline: none; border-color: #555; }
+
+button {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: #e8e8e8;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+button:hover { background: #333; }
+
+ul { list-style: none; margin-bottom: 1rem; }
+
+li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #1e1e1e;
+}
+
+li span { font-family: monospace; font-size: 0.9rem; }
+
+li button { font-size: 0.75rem; padding: 0.25rem 0.5rem; }
+
+form { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+
+.error { color: #e05c5c; font-size: 0.85rem; margin-top: 0.5rem; }
+
+#auth-status { font-size: 0.8rem; color: #666; }
