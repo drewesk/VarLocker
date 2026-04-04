@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { ml_kem768 } from "@noble/post-quantum/ml-kem";
+import { ml_kem768 } from "@noble/post-quantum/ml-kem.js";
 
 const args = process.argv.slice(2);
 const cmd = args[0];

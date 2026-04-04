@@ -3,7 +3,9 @@ AGENTS.md
 
 # dependencies
 node_modules/
+bun.lock
 bun.lockb
+.bun/
 
 # build output
 dist/
@@ -41,3 +43,8 @@ Thumbs.db
 
 # vite-plus local cache
 .vite-plus/
+
+# bun compiled binaries
+*.exe
+dist/varlocker
+dist/cli.js

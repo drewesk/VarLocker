@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
-import { initDb } from "./db.ts";
+import { initDb, db } from "./db.ts";
 import { generateKyberKeypair } from "./crypto.ts";
+import { hashNewToken } from "./auth.ts";
 import handshakeRoute, { loadKyberKeypair } from "./routes/handshake.ts";
 import projectsRoute from "./routes/projects.ts";
 import secretsRoute from "./routes/secrets.ts";
@@ -11,8 +12,17 @@ if (!process.env.MASTER_PASSWORD) {
   process.exit(1);
 }
 
-// Init DB
 initDb();
+
+// Bootstrap: if ADMIN_TOKEN is set, ensure it exists in the DB as a global token.
+if (process.env.ADMIN_TOKEN) {
+  const hash = await hashNewToken(process.env.ADMIN_TOKEN);
+  db.run(
+    `INSERT OR IGNORE INTO api_tokens (name, token_hash, project_id) VALUES ('admin', ?, NULL)`,
+    [hash]
+  );
+  console.log("Admin token registered.");
+}
 
 // Generate or load the Kyber keypair.
 // For production, persist pub/sec to DATA_DIR and reload on restart.
