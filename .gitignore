@@ -1,0 +1,43 @@
+# agent rules - not for source control
+AGENTS.md
+
+# dependencies
+node_modules/
+bun.lockb
+
+# build output
+dist/
+vp-out/
+.vite/
+
+# env files - never commit secrets
+.env
+.env.local
+.env.*.local
+
+# database files
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# key material
+*.key
+*.pem
+*.p8
+kyber.priv
+kyber.pub
+
+# test output
+coverage/
+
+# os
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/settings.json
+.idea/
+
+# vite-plus local cache
+.vite-plus/
