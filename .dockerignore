@@ -1,0 +1,11 @@
+.git
+node_modules
+packages/server/node_modules
+packages/cli/node_modules
+packages/server/.env
+.env
+packages/server/data
+data
+packages/server/dist
+packages/server/ui/dist
+.DS_Store

@@ -56,6 +56,7 @@ loadKyberKeypair(keypair.publicKey, keypair.secretKey);
 const app = new Hono();
 
 // API routes
+app.get("/health", (c) => c.json({ ok: true }));
 app.route("/api/handshake", handshakeRoute);
 app.route("/api/projects", projectsRoute);
 app.route("/api/projects", secretsRoute);

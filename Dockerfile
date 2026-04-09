@@ -3,6 +3,7 @@ FROM oven/bun:alpine AS builder
 WORKDIR /app
 
 COPY package.json ./
+COPY bun.lock ./
 COPY packages/server/package.json ./packages/server/
 COPY packages/cli/package.json ./packages/cli/
 

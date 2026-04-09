@@ -3,9 +3,11 @@ AGENTS.md
 
 # dependencies
 node_modules/
-bun.lock
 bun.lockb
 .bun/
+
+# commit bun.lock for reproducible deploys
+!bun.lock
 
 # build output
 dist/
@@ -50,3 +52,12 @@ Thumbs.db
 *.exe
 dist/varlocker
 dist/cli.js
+
+# local deploy secrets and machine-specific artifacts
+deploy/cloud-init*.yaml
+deploy/*.env
+deploy/*.env.*
+deploy/*.enc
+deploy/*.local
+deploy/*.local.*
+deploy/*.secret*

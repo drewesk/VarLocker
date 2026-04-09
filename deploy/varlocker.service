@@ -1,0 +1,14 @@
+[Unit]
+Description=VarLocker
+After=network.target
+
+[Service]
+User=varlocker
+WorkingDirectory=/opt/varlocker/packages/server
+EnvironmentFile=/etc/varlocker/varlocker.env
+ExecStart=/opt/varlocker/packages/server/dist/varlocker
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

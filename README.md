@@ -16,14 +16,14 @@ your projects entirely - you pull them at runtime, the AI never touches them.
 # 1. Clone and start the server
 git clone https://github.com/drewesk/VarLocker.git
 cd VarLocker
-cp .env.example .env   # set MASTER_PASSWORD
+cp .env.example .env   # set MASTER_PASSWORD and ADMIN_TOKEN
 bun run build && bun run start
 # Or with Docker:
 docker compose up -d
 
 # 2. Open the UI and connect
 # http://localhost:3000
-# Enter an API token (set ADMIN_TOKEN in .env for a default token, or create one via API)
+# Enter the ADMIN_TOKEN you set in .env
 
 # 3. Create a project and add secrets via the web UI
 
@@ -49,28 +49,32 @@ touches disk unless you redirect it yourself.
 
 ## Self-hosting
 
-Requirements: Docker and Docker Compose (or just Bun).
+Requirements: Bun, or Docker and Docker Compose.
+
+For a direct Linux droplet deployment, see `deploy/direct-droplet.md`.
+Use `deploy/credentials.template.txt` as a local runbook, not as a secret store.
 
 ```bash
 # Option 1: Run with Bun locally
 cp .env.example .env
-# Edit .env and set MASTER_PASSWORD=bomething-long-and-random
+# Edit .env and set MASTER_PASSWORD and ADMIN_TOKEN
 bun run build && bun run start
 
 # Option 2: Run with Docker
 cp .env.example .env
+# Set MASTER_PASSWORD and ADMIN_TOKEN, then start the container
 docker compose up -d
 ```
 
 **Environment Variables:**
 - `MASTER_PASSWORD` (required): Used to derive the encryption key for secrets at rest. Use something long and random.
 - `PORT` (optional, default 3000): The port the server listens on.
-- `ADMIN_TOKEN` (optional): If set, this token is automatically created as a global admin token on startup.
-- `DATA_DIR` (optional, default `./data`): Directory where the SQLite database and Kyber keypair are stored.
+- `ADMIN_TOKEN` (recommended): If set, this token is automatically created as a global admin token on startup.
+- `DATA_DIR` (optional, default `./data` from the server working directory): Directory where the SQLite database and Kyber keypair are stored.
 
 Data is stored in:
-- `./data/varlocker.db` - SQLite database with projects, secrets, and tokens
-- `./data/kyber.keypair` - The ML-KEM-768 keypair for secure handshakes
+- `DATA_DIR/varlocker.db` - SQLite database with projects, secrets, and tokens
+- `DATA_DIR/kyber.keypair` - The ML-KEM-768 keypair for secure handshakes
 
 Back up both files and you have everything.
 
@@ -84,6 +88,9 @@ npx varlocker pull --server http://localhost:3000 --project myapp --token <tok>
 
 # Save to .env file
 npx varlocker pull --server http://localhost:3000 --project myapp --token <tok> > .env
+
+# Run an app with secrets injected into its environment
+npx varlocker run --server http://localhost:3000 --project myapp --token <tok> -- node app.js
 
 # List available projects
 npx varlocker list --server http://localhost:3000 --token <tok>
