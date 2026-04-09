@@ -54,7 +54,8 @@ export function kyberEncapsulate(publicKey: Uint8Array): {
   ciphertext: Uint8Array;
   sharedSecret: Uint8Array;
 } {
-  return ml_kem768.encapsulate(publicKey);
+  const { cipherText, sharedSecret } = ml_kem768.encapsulate(publicKey);
+  return { ciphertext: cipherText, sharedSecret };
 }
 
 export function kyberDecapsulate(ciphertext: Uint8Array, secretKey: Uint8Array): Uint8Array {

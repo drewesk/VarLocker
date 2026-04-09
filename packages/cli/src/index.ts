@@ -41,12 +41,12 @@ async function kyberHandshake(server: string): Promise<Session> {
   const { publicKey } = await res.json() as { publicKey: string };
 
   const serverPub = Uint8Array.from(atob(publicKey), (c) => c.charCodeAt(0));
-  const { ciphertext, sharedSecret } = ml_kem768.encapsulate(serverPub);
+  const { cipherText, sharedSecret } = ml_kem768.encapsulate(serverPub);
 
   const postRes = await fetch(`${server}/api/handshake`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ ciphertext: btoa(String.fromCharCode(...ciphertext)) }),
+    body: JSON.stringify({ ciphertext: btoa(String.fromCharCode(...cipherText)) }),
   });
   if (!postRes.ok) throw new Error(`handshake failed: ${postRes.status}`);
   const { sessionId } = await postRes.json() as { sessionId: string };

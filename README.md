@@ -29,18 +29,18 @@ docker compose up -d
 
 # 4. Pull secrets into any project at runtime
 npx varlocker pull --server http://localhost:3000 --project myapp --token <tok>
-# Or export as .env:
-curl -H "Authorization: Bearer <tok>" http://localhost:3000/api/projects/myapp/env > .env
+# Or inject them into a child process:
+npx varlocker run --server http://localhost:3000 --project myapp --token <tok> -- bun run dev
 ```
 
 The `npx varlocker pull` command does a Kyber handshake with the server, decrypts
-the response locally, and prints your secrets in .env format to stdout. Nothing
+the response locally, and prints your secrets in `.env` format to stdout. Nothing
 touches disk unless you redirect it yourself.
 
 ## Features
 
 - Web UI to manage projects and secrets
-- ML-KEM-768 (Kyber) post-quantum key exchange on every API session
+- ML-KEM-768 (Kyber) session setup for secret reads and writes
 - AES-256-GCM encryption for secrets at rest
 - API tokens scoped per project
 - Export as .env or JSON
@@ -50,6 +50,9 @@ touches disk unless you redirect it yourself.
 ## Self-hosting
 
 Requirements: Bun, or Docker and Docker Compose.
+
+For remote deployments, put VarLocker behind HTTPS. The Kyber handshake protects
+secret payloads, but TLS is still required to authenticate the server.
 
 For a direct Linux droplet deployment, see `deploy/direct-droplet.md`.
 Use `deploy/credentials.template.txt` as a local runbook, not as a secret store.
@@ -94,6 +97,35 @@ npx varlocker run --server http://localhost:3000 --project myapp --token <tok> -
 
 # List available projects
 npx varlocker list --server http://localhost:3000 --token <tok>
+```
+
+## TS / Vite App Flow
+
+Use plain JSON for project admin routes. Secret reads require the Kyber session,
+and the built-in UI uses the Kyber session for secret writes.
+
+For a copyable backend helper, see `packages/cli/src/varlocker.ts`.
+
+1. Create a project with `POST /api/projects` using an admin token.
+2. Create a project token with `POST /api/projects/:slug/tokens`.
+3. Add secrets with `PUT /api/projects/:slug/secrets/:key`.
+4. At runtime, do `GET /api/handshake`, then `POST /api/handshake`.
+5. Derive the AES-GCM session key from the returned Kyber shared secret.
+6. Fetch `GET /api/projects/:slug/json` or `/env` with `Authorization`,
+   `x-session-id`, and `Accept: application/encrypted+json`.
+7. Decrypt the JSON payload locally and inject it into your app.
+
+For browser-only Vite apps, do not ship a VarLocker token to end users. Fetch
+from your backend or use `npx varlocker run` during local development.
+
+```ts
+import { fetchVarlockerJson } from "./varlocker";
+
+const secrets = await fetchVarlockerJson(
+  process.env.VARLOCKER_SERVER!,
+  process.env.VARLOCKER_PROJECT!,
+  process.env.VARLOCKER_TOKEN!,
+);
 ```
 
 ## License

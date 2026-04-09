@@ -12,6 +12,15 @@ export function getToken(): string {
   return _token;
 }
 
+function needsEncryptedBody(path: string, init: RequestInit): boolean {
+  const method = (init.method ?? "GET").toUpperCase();
+  return method === "PUT" && /\/api\/projects\/[^/]+\/secrets\/[^/]+$/.test(path);
+}
+
+function needsEncryptedResponse(path: string): boolean {
+  return /\/api\/projects\/[^/]+\/(env|json)$/.test(path);
+}
+
 // Encrypt data with the session key
 async function encryptData(data: string): Promise<{ iv: string; ciphertext: string }> {
   if (!_sessionKey) throw new Error("No session key");
@@ -39,12 +48,12 @@ export async function handshake(): Promise<void> {
   const { publicKey } = (await res.json()) as { publicKey: string };
 
   const serverPub = Uint8Array.from(atob(publicKey), (c) => c.charCodeAt(0));
-  const { ciphertext, sharedSecret } = ml_kem768.encapsulate(serverPub);
+  const { cipherText, sharedSecret } = ml_kem768.encapsulate(serverPub);
 
   const body = (await fetch("/api/handshake", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ ciphertext: btoa(String.fromCharCode(...ciphertext)) }),
+    body: JSON.stringify({ ciphertext: btoa(String.fromCharCode(...cipherText)) }),
   }).then((r) => r.json())) as { sessionId: string };
 
   const baseKey = await crypto.subtle.importKey("raw", sharedSecret, "HKDF", false, ["deriveKey"]);
@@ -63,22 +72,26 @@ export async function handshake(): Promise<void> {
   _sessionId = body.sessionId;
 }
 
-// Authenticated JSON fetch - encrypts request bodies and decrypts responses using the session key.
+// Authenticated JSON fetch for plain admin routes and encrypted secret routes.
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     authorization: `Bearer ${_token}`,
     ...(init.headers as Record<string, string> | undefined),
   };
   if (_sessionId) headers["x-session-id"] = _sessionId;
+  if (needsEncryptedResponse(path)) headers.accept = "application/encrypted+json";
 
-  // Encrypt request body if present
+  // Only secret-value writes use the session key; project admin routes stay plain JSON.
   let body: BodyInit | undefined;
-  if (init.body) {
+  if (init.body && needsEncryptedBody(path, init)) {
     const jsonStr = typeof init.body === "string" ? init.body : JSON.stringify(init.body);
     const encrypted = await encryptData(jsonStr);
     headers["content-type"] = "application/encrypted+json";
     headers["x-iv"] = encrypted.iv;
     body = JSON.stringify({ ciphertext: encrypted.ciphertext });
+  } else if (init.body) {
+    headers["content-type"] = "application/json";
+    body = typeof init.body === "string" ? init.body : JSON.stringify(init.body);
   } else {
     headers["content-type"] = "application/json";
   }

@@ -50,6 +50,22 @@ async function decryptRequestBody(c: any): Promise<any> {
   return JSON.parse(jsonStr);
 }
 
+async function encryptedJsonResponse(sessionKey: CryptoKey, payload: unknown): Promise<Response> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    sessionKey,
+    new TextEncoder().encode(JSON.stringify(payload)),
+  );
+  return new Response(
+    JSON.stringify({
+      iv: btoa(String.fromCharCode(...iv)),
+      ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+    }),
+    { headers: { "content-type": "application/encrypted+json" } },
+  );
+}
+
 function getProject(slug: string): { id: number } | null {
   return db.query("SELECT id FROM projects WHERE slug = ?").get(slug) as { id: number } | null;
 }
@@ -88,22 +104,7 @@ app.put("/:slug/secrets/:key", async (c) => {
   const contentType = c.req.header("content-type") || "";
   if (contentType.includes("application/encrypted+json")) {
     const sessionKey = (c.get("sessionKey") as CryptoKey | undefined) ?? null;
-    if (sessionKey) {
-      const responseStr = JSON.stringify({ ok: true });
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const ciphertext = await crypto.subtle.encrypt(
-        { name: "AES-GCM", iv },
-        sessionKey,
-        new TextEncoder().encode(responseStr),
-      );
-      return c.json(
-        {
-          iv: btoa(String.fromCharCode(...iv)),
-          ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
-        },
-        { headers: { "content-type": "application/encrypted+json" } },
-      );
-    }
+    if (sessionKey) return encryptedJsonResponse(sessionKey, { ok: true });
   }
   return c.json({ ok: true });
 });
@@ -124,32 +125,15 @@ app.get("/:slug/env", async (c) => {
   if (!project) return c.json({ error: "not found" }, 404);
   const authErr = authorizeProject(c, project.id);
   if (authErr) return authErr;
+  const sessionKey = resolveSessionKey(c);
+  if (!sessionKey) return c.json({ error: "session required" }, 400);
   const rows = db
     .query("SELECT key, enc_value, iv FROM secrets WHERE project_id = ?")
     .all(project.id) as { key: string; enc_value: string; iv: string }[];
   const lines = await Promise.all(
     rows.map(async (r) => `${r.key}=${await decryptSecret(r.enc_value, r.iv)}`),
   );
-  const accept = c.req.header("accept") || "";
-  if (accept.includes("application/encrypted+json")) {
-    const sessionKey = resolveSessionKey(c);
-    if (!sessionKey) return c.json({ error: "session required" }, 400);
-    const payload = JSON.stringify({ env: lines.join("\n") + "\n" });
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ciphertext = await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv },
-      sessionKey,
-      new TextEncoder().encode(payload),
-    );
-    return c.json(
-      {
-        iv: btoa(String.fromCharCode(...iv)),
-        ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
-      },
-      { headers: { "content-type": "application/encrypted+json" } },
-    );
-  }
-  return new Response(lines.join("\n") + "\n", { headers: { "content-type": "text/plain" } });
+  return encryptedJsonResponse(sessionKey, { env: lines.join("\n") + "\n" });
 });
 
 // GET /api/projects/:slug/json  - decrypted JSON export
@@ -158,30 +142,14 @@ app.get("/:slug/json", async (c) => {
   if (!project) return c.json({ error: "not found" }, 404);
   const authErr = authorizeProject(c, project.id);
   if (authErr) return authErr;
+  const sessionKey = resolveSessionKey(c);
+  if (!sessionKey) return c.json({ error: "session required" }, 400);
   const rows = db
     .query("SELECT key, enc_value, iv FROM secrets WHERE project_id = ?")
     .all(project.id) as { key: string; enc_value: string; iv: string }[];
   const out: Record<string, string> = {};
   for (const r of rows) out[r.key] = await decryptSecret(r.enc_value, r.iv);
-  const accept = c.req.header("accept") || "";
-  if (accept.includes("application/encrypted+json")) {
-    const sessionKey = resolveSessionKey(c);
-    if (!sessionKey) return c.json({ error: "session required" }, 400);
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ciphertext = await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv },
-      sessionKey,
-      new TextEncoder().encode(JSON.stringify(out)),
-    );
-    return c.json(
-      {
-        iv: btoa(String.fromCharCode(...iv)),
-        ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
-      },
-      { headers: { "content-type": "application/encrypted+json" } },
-    );
-  }
-  return c.json(out);
+  return encryptedJsonResponse(sessionKey, out);
 });
 
 export default app;
